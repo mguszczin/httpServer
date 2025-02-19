@@ -18,9 +18,13 @@ void handle_socket(int clientsocket) {
         close(clientsocket);
         return;
     }
-    
-    buffer[bytes_read] = '\0';
-    printf("%s", buffer);
+
+    char response[] = "HTTP/1.1 200 OK\r\n\r\n";
+
+    if(send(clientsocket, response, sizeof(response) - 1,0) < 0){
+        perror("write failed");
+    }
+
     close(clientsocket);
 }
 
