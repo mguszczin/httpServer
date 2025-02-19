@@ -4,8 +4,26 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include<unistd.h>
 
 #define PORT 8080
+#define BUFFER_SIZE 256
+
+void handle_socket(int clientsocket) {
+    char buffer[BUFFER_SIZE];
+
+    ssize_t bytes_read = read(clientsocket, buffer, sizeof(buffer) - 1);
+    if (bytes_read < 0) {
+        perror("read failed");
+        close(clientsocket);
+        return;
+    }
+    
+    buffer[bytes_read] = '\0';
+    printf("%s", buffer);
+    close(clientsocket);
+}
+
 
 int main() {
 
@@ -29,7 +47,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    int max_queue = 1;
+    int max_queue = 3;
     if(listen(serversocket, max_queue) < 0) {       // make socket listen to calls 
         perror("Listening failed");
         close(serversocket);
@@ -37,13 +55,9 @@ int main() {
     }
 
     int clientsocket;
-    if((clientsocket = accept(serversocket, (struct sockaddr *)&socketadress, &adresssize)) < 0) {
-        perror("Can't connect with socket");
-        close(serversocket);
-        exit(EXIT_FAILURE);
+    while((clientsocket = accept(serversocket, (struct sockaddr *)&socketadress, &adresssize)) >= 0) {
+        handle_socket(clientsocket);
     }
-
-    printf("Hello World, Socket id : %d", clientsocket);
 
     close(serversocket);
 
