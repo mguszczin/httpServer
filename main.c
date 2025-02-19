@@ -19,9 +19,20 @@ void handle_socket(int clientsocket) {
         return;
     }
 
-    char response[] = "HTTP/1.1 200 OK\r\n\r\n";
+    char responseOk[] = "HTTP/1.1 200 OK\r\n\r\n";
+    char responseNotFound[] = "HTTP/1.1 404 Not Found\r\n\r\n";
+    char *response;
 
-    if(send(clientsocket, response, sizeof(response) - 1,0) < 0){
+    char *RequestLine = strtok(buffer, "\r\n");
+
+    char *method = strtok(RequestLine, " ");
+    char *path = strtok(NULL, " ");
+    char *protocol = strtok(NULL, " ");
+
+    if(strcmp(path, "/") == 0) response = responseOk;
+    else response = responseNotFound;
+
+    if(send(clientsocket, response, strlen(response),0) < 0){
         perror("write failed");
     }
 
@@ -58,7 +69,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    int clientsocket;
+    int clientsocket;                               // make http responses
     while((clientsocket = accept(serversocket, (struct sockaddr *)&socketadress, &adresssize)) >= 0) {
         handle_socket(clientsocket);
     }
