@@ -4,14 +4,19 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
-#include<unistd.h>
+#include <unistd.h>
 
 #define PORT 8080
 #define BUFFER_SIZE 256
 
+
+// to do 
+// add files reading 
+// add gzip compression
+// then have fun, maybe some api ? 
+
 void handle_socket(int clientsocket) {
     char buffer[BUFFER_SIZE];
-
     ssize_t bytes_read = read(clientsocket, buffer, sizeof(buffer) - 1);
     if (bytes_read < 0) {
         perror("read failed");
@@ -62,7 +67,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    int max_queue = 3;
+    int max_queue = 5;
     if(listen(serversocket, max_queue) < 0) {       // make socket listen to calls 
         perror("Listening failed");
         close(serversocket);
@@ -71,7 +76,19 @@ int main() {
 
     int clientsocket;                               // make http responses
     while((clientsocket = accept(serversocket, (struct sockaddr *)&socketadress, &adresssize)) >= 0) {
-        handle_socket(clientsocket);
+        pid_t procesid = fork();
+        
+        if(procesid == 0) {
+            close(serversocket);
+            handle_socket(clientsocket);
+            exit(0);
+        }else if(procesid > 0) {
+            close(clientsocket);
+            continue;
+        }else {
+            perror("Forking went wrong");
+            break;
+        }
     }
 
     close(serversocket);
