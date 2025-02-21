@@ -5,17 +5,41 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <unistd.h>
+#include <string.h>
+#include <stdbool.h>
 
 #define PORT 8080
 #define BUFFER_SIZE 256
 
 
-// to do 
-// add files reading 
-// add gzip compression
-// then have fun, maybe some api ? 
+
+
+bool add_echo(char **response, char *RequestLine, char *path) {
+
+    char *body = path + 6;
+
+    const char *header_template =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/html\r\n"
+        "Content-Length: %d\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "%s";
+
+    // compute maximal buffer size
+     int max_size = 200 + strlen(body);
+
+    *response = (char *)malloc(max_size * sizeof(char));
+    if (!*response) return false;
+
+    if(snprintf(*response, max_size, header_template, (int)strlen(body), body) < 0) {
+        perror("echo went wrong");
+    };
+}
+
 
 void handle_socket(int clientsocket) {
+    // read http request
     char buffer[BUFFER_SIZE];
     ssize_t bytes_read = read(clientsocket, buffer, sizeof(buffer) - 1);
     if (bytes_read < 0) {
@@ -24,6 +48,7 @@ void handle_socket(int clientsocket) {
         return;
     }
 
+    // get basic responses
     char responseOk[] = "HTTP/1.1 200 OK\r\n\r\n";
     char responseNotFound[] = "HTTP/1.1 404 Not Found\r\n\r\n";
     char *response;
@@ -34,8 +59,14 @@ void handle_socket(int clientsocket) {
     char *path = strtok(NULL, " ");
     char *protocol = strtok(NULL, " ");
 
-    if(strcmp(path, "/") == 0) response = responseOk;
+    bool successful;
+
+    if(strncmp(path, "/", strlen(path)) == 0) response = responseOk;
+    else if(strncmp(path, "/echo/", 6) == 0) add_echo(&response, RequestLine, path);
+    // else if(strcmp(path, "/file/"))
     else response = responseNotFound;
+
+
 
     if(send(clientsocket, response, strlen(response),0) < 0){
         perror("write failed");
@@ -74,8 +105,10 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    int clientsocket;                               // make http responses
+    // make new socket for http response
+    int clientsocket;                             
     while((clientsocket = accept(serversocket, (struct sockaddr *)&socketadress, &adresssize)) >= 0) {
+        // create concurrent connection
         pid_t procesid = fork();
         
         if(procesid == 0) {
