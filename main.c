@@ -14,7 +14,7 @@
 
 
 
-bool add_echo(char **response, char *RequestLine, char *path) {
+void add_echo(char **response, char *RequestLine, char *path) {
 
     char *body = path + 6;
 
@@ -73,6 +73,7 @@ void handle_socket(int clientsocket) {
     }
 
     close(clientsocket);
+    free(response);
 }
 
 
