@@ -66,7 +66,7 @@ void get_Headers_response(HttpResponse *res, char **headers) {
         }
         headerLine = temp;
 
-        // Append the header and CRLF
+        // append the header and CRLF
         strcat(headerLine, res->headers[i]);
         strcat(headerLine, "\r\n");
     }
@@ -153,7 +153,66 @@ void freeHttpResponse(HttpResponse *res){
 }
 
 // get Http response of Chosen code use status_mappings
-void getHttpResponse(HttpResponse *res, HttpStatusCode code) {
-    res->starting_line = 
-    (StartingLine){.status_code = code, .status_message = status_mappings[code]};
+void getHttpStatusLine(HttpResponse *res, HttpStatusCode code) {
+
+    // Declare status_message first!
+    char *status_message = "Unknown Status"; // Default message
+
+     if (code >= 0 && status_mappings[code] != NULL) {
+        status_message = strdup(status_mappings[code]);
+    }else {
+        perror("Wrong Http code!");
+    }
+
+    // Assign the starting line
+    res->starting_line = (StartingLine){.status_code = code, .status_message = status_message};
+}
+
+void addHeader(HttpResponse *res, char *header) {
+
+    if (res == NULL || header == NULL) {
+        fprintf(stderr, "Error: NULL input to addHeader\n");
+        return;
+    }
+
+    char **tmp = realloc(res->headers, (res->header_count + 1) * sizeof(char *));
+    if(tmp == NULL) {
+        perror("Malloc went wrong while adding a header");
+        return;
+    }
+
+    res->headers = tmp;
+    res->headers[res->header_count] = strdup(header);
+    res->header_count++;
+}
+
+void addBody(HttpResponse *res, char *body, char *contentType) {
+    // add body
+    res->body = strdup(body);
+
+    // add necessary headers
+    int content_length = strlen(body);
+    int headerContent_size = snprintf(NULL, 0, "Content-Length: %d", content_length);
+    int headerType_size = snprintf(NULL, 0, "Content-Type: %s", contentType);
+
+    char *headerContent = malloc(headerContent_size + 1);    // +1 for null terminated string
+    char *headerType = malloc(headerContent_size + 1);
+
+    // look for errors
+    if (!headerContent || !headerType) {
+        perror("Failed to allocate memory for headers");
+        free(res->body);  // Clean up previously allocated memory
+        free(headerContent);
+        free(headerType);
+        return;
+    }
+
+    snprintf(headerContent, headerContent_size, "Content-Length: %d", content_length);
+    snprintf(headerType, headerType_size, "Content-Type: %s", contentType);
+
+    addHeader(res, headerContent);
+    addHeader(res, headerType);
+
+    free(headerContent);
+    free(headerType);
 }

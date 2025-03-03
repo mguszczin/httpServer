@@ -14,11 +14,9 @@
 void construct_http_response(HttpRequest *req, HttpResponse *res, int clientsocket) {
 
     if(strcmp(req->path, "/dupa") == 0) {
-        res->starting_line.status_code = 200;
-        res->starting_line.status_message = strdup("OK");
+        getHttpStatusLine(res, HTTP_OK);
     }else {
-        res->starting_line.status_code = 404;
-        res->starting_line.status_message = strdup("Not Found");
+        getHttpStatusLine(res, HTTP_NOT_FOUND);
     }
 
     SendHttpResponse(res, clientsocket);
