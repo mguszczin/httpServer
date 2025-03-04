@@ -7,7 +7,7 @@
 
 void getHtmlBodyfromFile(char * filecontent, HttpResponse *res){
     
-    int size = snprintf(NULL, 0, HTTP_TEMPLATE, filecontent);
+    int size = snprintf(NULL, 0, HTTP_TEMPLATE, filecontent) + 1;
     if(size < 0) {
         perror("NULL snprintf went wrong in getHttpBodyfromFile");
         return ;
@@ -17,6 +17,7 @@ void getHtmlBodyfromFile(char * filecontent, HttpResponse *res){
     if(snprintf(new_html_wrapped_file, size, HTTP_TEMPLATE, filecontent) < 0) {
         perror("snprintf went wrong in getHttpBodyfromFile");
         free(new_html_wrapped_file);
+        return;
     }
     addBody(res, new_html_wrapped_file, HTML);
 }
