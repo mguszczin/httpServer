@@ -9,6 +9,11 @@ typedef enum {
     HTTP_INTERNAL_ERROR = 500
 } HttpStatusCode;
 
+typedef enum {
+    HTML,
+    TEXT
+} ContentType;
+
 typedef struct{
     int status_code;
     char *status_message;
@@ -35,6 +40,6 @@ void getHttpStatusLine(HttpResponse *res, HttpStatusCode code);
 
 void addHeader(HttpResponse *res, char *header);
 
-void addBody(HttpResponse *res, char *body, char *filetype);
+void addBody(HttpResponse *res, char *body, ContentType type);
 
 #endif

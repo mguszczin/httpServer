@@ -13,6 +13,17 @@ static const char* status_mappings[] = {
     [500] = "Internal Server Error"
 };
 
+char* get_content_type(ContentType type) {
+    switch (type)
+    {
+        case HTML:
+            return "text/html";
+        case TEXT:
+            return "text/plain";
+        default:
+            return "application/octet-stream";
+    }
+}
 
 void InitializeHttpResponse(HttpResponse *res){
     res->starting_line = 
@@ -186,9 +197,10 @@ void addHeader(HttpResponse *res, char *header) {
     res->header_count++;
 }
 
-void addBody(HttpResponse *res, char *body, char *contentType) {
+void addBody(HttpResponse *res, char *body, ContentType type) {
     // add body
     res->body = strdup(body);
+    char *contentType = get_content_type(type);
 
     // add necessary headers
     int content_length = strlen(body);
