@@ -5,6 +5,21 @@
 #include "wrap_file_to_html.h"
 #include "http_response.h"
 
+static const char *HTTP_TEMPLATE =
+    "<!DOCTYPE html>\n"
+    "<html lang=\"en\">\n"
+    "<head>\n"
+    "    <meta charset=\"UTF-8\">\n"
+    "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+    "    <title>Simple Page</title>\n"
+    "</head>\n"
+    "<body>\n"
+    "    <h1>%s</h1>\n"
+    "</body>\n"
+    "</html>\n";
+
+// function should be improved a little bit 
+// now it will break if there will be special signs like \ or %
 void getHtmlBodyfromFile(char * filecontent, HttpResponse *res){
     
     int size = snprintf(NULL, 0, HTTP_TEMPLATE, filecontent) + 1;

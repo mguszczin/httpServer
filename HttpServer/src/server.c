@@ -8,15 +8,22 @@
 #include "server.h"
 #include "http_request.h"
 #include "http_response.h"
+#include "read_from_file.h"
+#include "wrap_file_to_html.h"
 
 #define BUFFER_SIZE 256
 
 void construct_http_response(HttpRequest *req, HttpResponse *res, int clientsocket) {
 
-    if(strcmp(req->path, "/dupa") == 0) {
+    if(strcmp(req->path, "/index") == 0) {
         getHttpStatusLine(res, HTTP_OK);
+        char *filepath = strdup("file_read/index");
+        char *filecontent = getfile(filepath);
+        getHtmlBodyfromFile(filecontent,res);
+
     }else {
         getHttpStatusLine(res, HTTP_NOT_FOUND);
+        getHtmlBodyfromFile("404 Not Found",res);
     }
 
     SendHttpResponse(res, clientsocket);
@@ -52,9 +59,9 @@ void handle_socket(int clientsocket) {
     construct_http_response(httpReq, httpRes, clientsocket);
 
     // close the socket and free all the memory
-    close(clientsocket);
     freeHttpRequest(httpReq);
     freeHttpResponse(httpRes);
+    close(clientsocket);
 }
 
 int start_server(int PORT) {

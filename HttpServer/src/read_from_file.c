@@ -7,7 +7,6 @@ char * getfile(char * filepath){
     FILE *file = fopen(filepath, "r");
 
     if(file == NULL) {
-        perror("NO FILES TO GET");
         return NULL;
     }
 
@@ -29,7 +28,7 @@ char * getfile(char * filepath){
     }
 
     // read file contents
-    if (fread(filecontent, 1, file_size, file) < file_size) {
+    if (fread(filecontent, 1, file_size, file) < (size_t)file_size) {
         perror("File reading error");
         free(filecontent);
         fclose(file);
@@ -38,6 +37,7 @@ char * getfile(char * filepath){
 
 
     filecontent[file_size] = '\0';
+    
     fclose(file);
 
     return filecontent;

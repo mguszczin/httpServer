@@ -208,7 +208,7 @@ void addBody(HttpResponse *res, char *body, ContentType type) {
     int headerType_size = snprintf(NULL, 0, "Content-Type: %s", contentType);
 
     char *headerContent = malloc(headerContent_size + 1);    // +1 for null terminated string
-    char *headerType = malloc(headerContent_size + 1);
+    char *headerType = malloc(headerType_size + 1);
 
     // look for errors
     if (!headerContent || !headerType) {
@@ -219,8 +219,8 @@ void addBody(HttpResponse *res, char *body, ContentType type) {
         return;
     }
 
-    snprintf(headerContent, headerContent_size, "Content-Length: %d", content_length);
-    snprintf(headerType, headerType_size, "Content-Type: %s", contentType);
+    snprintf(headerContent, headerContent_size + 1, "Content-Length: %d", content_length);
+    snprintf(headerType, headerType_size + 1, "Content-Type: %s", contentType);
 
     addHeader(res, headerContent);
     addHeader(res, headerType);
