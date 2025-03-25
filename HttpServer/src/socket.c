@@ -74,7 +74,7 @@ void send_http_update(int clientsocket, char **filepath){
     addHeader(httpRes, "Connection: keep-alive");
     if(filecontent == NULL) {
         // if there is no file specified in the url - we throw 404
-        getHttpStatusLine(httpRes, HTTP_OK);
+        getHttpStatusLine(httpRes, HTTP_NOT_FOUND);
         getHtmlBodyfromFile("404 Not Found",httpRes);
     }else {
         // if there is specified file we send it with necessary headers 
@@ -121,42 +121,19 @@ void get_http_response(int clientsocket, char **buffer, char **prevurl) {
         return;
     }
 
-    // initialize httpResponse
-    HttpResponse *httpRes = malloc(sizeof(HttpResponse));
-    InitializeHttpResponse(httpRes);
-
     // asigin prev ulr and construct file path 
     char *filepath = get_file_path(httpreq->path);
+
+    if (strcmp(httpreq->path, "/favicon.ico") != 0) *prevurl = strdup(httpreq->path);
 
     if(filepath == NULL) {
         perror("filepath is NULL");
         return;
     }
 
-    // get content of file 
-    char *filecontent = getfile(filepath);
+    send_http_update(clientsocket, &filepath);
 
-    if (strcmp(httpreq->path, "/favicon.ico") == 0) {
-        getHttpStatusLine(httpRes, HTTP_NOT_FOUND);
-        getHtmlBodyfromFile("404 Not Found", httpRes);
-        SendHttpResponse(httpRes, clientsocket);
-        freeHttpRequest(httpreq);
-        freeHttpResponse(httpRes);
-        return;
-    }
-
-    *prevurl = strdup(httpreq->path);
-
-    if(filecontent == NULL) {
-        getHttpStatusLine(httpRes, HTTP_OK);
-        getHtmlBodyfromFile("404 Not Found",httpRes);
-    }else {
-        getHttpStatusLine(httpRes, HTTP_OK);
-        getHtmlBodyfromFile(filecontent,httpRes);
-    }
-    SendHttpResponse(httpRes, clientsocket);
     freeHttpRequest(httpreq);
-    freeHttpResponse(httpRes);
 }
 
 void handle_socket(int clientsocket) {
