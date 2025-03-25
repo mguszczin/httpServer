@@ -36,10 +36,27 @@ char* get_file_path(char *filename) {
     }
 
     // Copy FILE_DIR into result and append the filename.
+    // strcpy first because we have unitialized memory 
     strcpy(result, DIR_PATH);
     strcat(result, filename);
 
     return result;
+}
+
+char *push_front(char *front, char *back) {
+    // Calculate new size +1 for null terminator
+    int newsize = strlen(front) + strlen(back) + 1;
+    char *newString = malloc(sizeof(char) * newsize);
+    if(!newString) {
+        perror("malloc failed");
+        return NULL;
+    }
+
+    // copy front and back to newString
+    strcpy(newString, front);
+    strcat(newString, back);
+
+    return newString;
 }
 
 void send_http_update(int clientsocket, char **filepath){
@@ -54,8 +71,7 @@ void send_http_update(int clientsocket, char **filepath){
 
     // get content of file 
     char *filecontent = getfile(*filepath);
-
-
+    addHeader(httpRes, "Connection: keep-alive");
     if(filecontent == NULL) {
         // if there is no file specified in the url - we throw 404
         getHttpStatusLine(httpRes, HTTP_OK);
@@ -67,6 +83,7 @@ void send_http_update(int clientsocket, char **filepath){
     }
     SendHttpResponse(httpRes, clientsocket);
     freeHttpResponse(httpRes);
+    free(filecontent);
 }
 
 void send_file_update(int clientsocket, char **buffer, char **prevurl, int size) {
@@ -79,12 +96,17 @@ void send_file_update(int clientsocket, char **buffer, char **prevurl, int size)
     for (char *ptr = *buffer; ptr < *buffer + size; ptr += sizeof(struct inotify_event) + event->len) {
         event = (struct inotify_event *) ptr;
 
-        if (event->mask & IN_MODIFY) {
-            char *filepath = get_file_path("/index");
-            printf("Changed_file_Path : %s", filepath);         // check for errors
-            if(strcmp(filepath, *prevurl) == 0) {
+        if ((event->mask & IN_MODIFY) && !(event->mask & IN_ISDIR)) {
+            char *updPath = push_front("/", event->name);
+            printf("Changed_file_Path : %s\n", updPath);         // check for errors
+            printf("Prev_Url : %s\n", *prevurl);
+            if(strcmp(updPath, *prevurl) == 0) {
+                char *filepath = get_file_path(updPath);
+                printf("FIle path : %s\n", filepath);
                 send_http_update(clientsocket, &filepath);
+                free(filepath);
             }
+            free(updPath);
         }
     }
 }
@@ -104,7 +126,6 @@ void get_http_response(int clientsocket, char **buffer, char **prevurl) {
     InitializeHttpResponse(httpRes);
 
     // asigin prev ulr and construct file path 
-    *prevurl = strdup(httpreq->path);
     char *filepath = get_file_path(httpreq->path);
 
     if(filepath == NULL) {
@@ -114,6 +135,17 @@ void get_http_response(int clientsocket, char **buffer, char **prevurl) {
 
     // get content of file 
     char *filecontent = getfile(filepath);
+
+    if (strcmp(httpreq->path, "/favicon.ico") == 0) {
+        getHttpStatusLine(httpRes, HTTP_NOT_FOUND);
+        getHtmlBodyfromFile("404 Not Found", httpRes);
+        SendHttpResponse(httpRes, clientsocket);
+        freeHttpRequest(httpreq);
+        freeHttpResponse(httpRes);
+        return;
+    }
+
+    *prevurl = strdup(httpreq->path);
 
     if(filecontent == NULL) {
         getHttpStatusLine(httpRes, HTTP_OK);
@@ -170,6 +202,7 @@ void handle_socket(int clientsocket) {
                 http_buffer = NULL;
             } else if (status == 0) {
                 // Connection closed
+                printf("connection closed by socket\n");
                 break;
             } else {
                 if (errno == ECONNRESET) {
@@ -190,6 +223,7 @@ void handle_socket(int clientsocket) {
             } else if (status < 0) {
                 perror("dynamic_read (inotify) doesn't work - 191 socket.c");
             }
+            printf("send update");
         }
     }
     printf("BYE");

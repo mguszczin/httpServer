@@ -50,7 +50,6 @@ int start_server(int PORT) {
         pid_t procesid = fork();
         if(procesid == 0) {
             close(serversocket);
-            printf("Accepted connection after fork call\n");
             handle_socket(clientsocket);
             exit(0);
         }else if(procesid > 0) {

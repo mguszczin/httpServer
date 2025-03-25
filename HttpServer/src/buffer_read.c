@@ -87,7 +87,6 @@ int dynamic_read(int file_descriptor, char **buffer, const int READ_CHUNK) {
             break;
         } else { // bytes_read == -1, an error occurred
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                printf("Non-blocking read would block, exiting\n");
                 break;
             } else {
                 perror("read error");
