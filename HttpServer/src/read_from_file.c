@@ -10,6 +10,14 @@ char * getfile(char * filepath){
         return NULL;
     }
 
+    // check if there is directory under filepath
+    struct stat st;
+    fstat(fileno(file), &st);
+    if (S_ISDIR(st.st_mode)) {
+        fclose(file);
+        return NULL;
+    }
+
     // get file 
     struct stat file_status;
     if (stat(filepath, &file_status) < 0) {
@@ -29,7 +37,8 @@ char * getfile(char * filepath){
 
     // read file contents
     if (fread(filecontent, 1, file_size, file) < (size_t)file_size) {
-        perror("File reading error");
+        printf("file path : %s\n", filepath);
+        perror("File reading error in read_from_file.c");
         free(filecontent);
         fclose(file);
         return NULL;
