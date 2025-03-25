@@ -162,7 +162,7 @@ void handle_socket(int clientsocket) {
 
         // Handle HTTP request events
         if (fds[0].revents & POLLIN) {
-            int status = dynamic_read(clientsocket, &http_buffer);
+            int status = dynamic_read(clientsocket, &http_buffer, SMALL_CHUNK);
             if (status > 0) {
                 // Process the HTTP request
                 get_http_response(clientsocket, &http_buffer, &prevurl);
@@ -182,14 +182,13 @@ void handle_socket(int clientsocket) {
 
         // Handle inotify events (file changes)
         if (fds[1].revents & POLLIN) {
-            printf("some file changed");
-            int status = dynamic_read(inotify_fd, &inotify_buffer);
+            int status = static_read(inotify_fd, &inotify_buffer, INOTIFY_RECOMMENDED);
             if (status > 0) {
                 send_file_update(clientsocket, &inotify_buffer, &prevurl, status);
                 free(inotify_buffer);
                 inotify_buffer = NULL;
             } else if (status < 0) {
-                perror("dynamic_read (inotify)");
+                perror("dynamic_read (inotify) doesn't work - 191 socket.c");
             }
         }
     }
