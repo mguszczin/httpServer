@@ -9,67 +9,63 @@
 #include "server.h"
 #include "socket.h"
 
-#define BUFFER_SIZE 256
+/*
+ * Function that initializes a server on the given port.
+ * Returns 0 on success, -1 on error.
+ * Supports concurrent connections using fork() for each client.
+ */
 
-int start_server(int PORT)
+int start_server(int port)
 {
-	int serversocket;
+	int server_socket;
 
-	struct sockaddr_in socketadress;
-	socklen_t adresssize = sizeof(socketadress);
+	struct sockaddr_in socket_adress;
+	socklen_t adresssize = sizeof(socket_adress);
 
-	if ((serversocket = socket(AF_INET, SOCK_STREAM, 0)) <
-	    0) { // creating socket for tcp connections
-		perror("Socket failed");
-		exit(EXIT_FAILURE);
+	if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) <0) {
+		perror("Socket creation failed");
 		return -1;
 	}
 
-	socketadress.sin_addr.s_addr = INADDR_ANY;
-	socketadress.sin_family = AF_INET;
-	socketadress.sin_port = htons(PORT);
+	socket_adress.sin_addr.s_addr = INADDR_ANY;
+	socket_adress.sin_family = AF_INET;
+	socket_adress.sin_port = htons(port);
 
-	if (bind(serversocket, (struct sockaddr *)&socketadress, adresssize) <
-	    0) { // bind adress to a socket
+	if (bind(server_socket, (struct sockaddr *)&socket_adress, adresssize) < 0) {
 		perror("Binding went wrong");
-		close(serversocket);
-		exit(EXIT_FAILURE);
+		close(server_socket);
 		return -1;
 	}
-	printf("Binded to port 8080\n");
+	printf("Binded to port: %d\n", port);
 	int max_queue = 5;
-	if (listen(serversocket, max_queue) <
-	    0) { // make socket listen to calls
+	if (listen(server_socket, max_queue) < 0) { 
 		perror("Listening failed");
-		close(serversocket);
-		exit(EXIT_FAILURE);
+		close(server_socket);
 		return -1;
 	}
 	// make new socket for http response
 	int clientsocket;
-	printf("LISTENING TO PORT 8080\n");
-	while ((clientsocket =
-		    accept(serversocket, (struct sockaddr *)&socketadress,
-			   &adresssize)) >= 0) {
+	printf("LISTENING TO PORT: %d\n", port);
+	while ((clientsocket = accept(server_socket, 
+                (struct sockaddr *)&socket_adress, &adresssize)) >= 0) {
 		// create concurrent connection
 		printf("Accepted connection\n");
-		pid_t procesid = fork();
-		if (procesid == 0) {
-			close(serversocket);
+		pid_t proces_id = fork();
+		if (proces_id == 0) {
+			close(server_socket);
 			handle_socket(clientsocket);
 			exit(0);
-		} else if (procesid > 0) {
+		} else if (proces_id > 0) {
 			close(clientsocket);
 			continue;
 		} else {
 			perror("Forking went wrong");
-			close(serversocket);
+			close(server_socket);
 			return -1;
-			break;
 		}
 	}
 
-	close(serversocket);
+	close(server_socket);
 
 	return 0;
 }

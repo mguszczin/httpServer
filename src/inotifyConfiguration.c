@@ -12,7 +12,7 @@ bool inotifyInitialize(int *wd, int *fd, char *dirPath)
 	// Initialize inotify
 	int inotify_fd = inotify_init();
 	if (inotify_fd < 0) {
-		perror("inotify_init");
+		perror("inotify failed to initialize");
 		return false;
 	}
 	// Set inotify to watch directory
