@@ -5,5 +5,4 @@
 
 void getHtmlBodyfromFile(char *filePath, HttpResponse *res);
 
-
 #endif
