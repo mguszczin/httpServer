@@ -80,6 +80,7 @@ int dynamic_read(int file_descriptor, char **buffer, const int READ_CHUNK) {
                     *buffer = NULL;
                     return -1;
                 }
+                free(*buffer);
                 *buffer = temp;
             }
         } else if (bytes_read == 0) {

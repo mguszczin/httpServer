@@ -1,6 +1,9 @@
 #ifndef HTTP_RESPONSE_H
 #define HTTP_RESPONSE_H
 
+/*
+Status code our functions will be using as allowed input 
+*/
 typedef enum {
     HTTP_OK = 200,
     HTTP_CREATED = 201,
@@ -8,6 +11,7 @@ typedef enum {
     HTTP_NOT_FOUND = 404,
     HTTP_INTERNAL_ERROR = 500
 } HttpStatusCode;
+
 
 typedef enum {
     HTML,
@@ -18,6 +22,7 @@ typedef struct{
     int status_code;
     char *status_message;
 } StartingLine;
+
 
 typedef struct {
     StartingLine starting_line;
