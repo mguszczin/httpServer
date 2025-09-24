@@ -3,6 +3,6 @@
 
 #include "http_response.h"
 
-void getHtmlBodyfromFile(char *filePath, HttpResponse *res);
+void getHtmlBodyfromFile(char *filePath, http_response_t *res);
 
 #endif

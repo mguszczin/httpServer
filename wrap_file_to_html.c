@@ -21,7 +21,7 @@ static const char *HTTP_TEMPLATE =
 
 // function should be improved a little bit
 // now it will break if there will be special signs like \ or %
-void getHtmlBodyfromFile(char *filecontent, HttpResponse *res)
+void getHtmlBodyfromFile(char *filecontent, http_response_t *res)
 {
 
 	int size = snprintf(NULL, 0, HTTP_TEMPLATE, filecontent) + 1;

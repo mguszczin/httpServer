@@ -6,12 +6,12 @@
 #include "http_response.h"
 
 static const char *status_mappings[] = {
-                                        [200] = "OK",
-					[201] = "Created",
-					[400] = "Bad Request",
-					[404] = "Not Found",
-					[500] = "Internal Server Error"
-                                        };
+        [200] = "OK",
+	[201] = "Created",
+	[400] = "Bad Request",
+        [404] = "Not Found",
+	[500] = "Internal Server Error"
+        };
 
 char *get_content_type(ContentType type)
 {
@@ -25,7 +25,7 @@ char *get_content_type(ContentType type)
 	}
 }
 
-void InitializeHttpResponse(HttpResponse *res)
+void InitializeHttpResponse(http_response_t *res)
 {
 	res->starting_line =
 	    (StartingLine){.status_code = -1, .status_message = strdup("")};
@@ -37,7 +37,7 @@ void InitializeHttpResponse(HttpResponse *res)
 	res->body_size = 0;
 }
 
-void get_StartLine_response(HttpResponse *res, char **startline)
+void get_StartLine_response(http_response_t *res, char **startline)
 {
 
 	// calculate StartingLine size - +1 for null terminator
@@ -62,7 +62,7 @@ void get_StartLine_response(HttpResponse *res, char **startline)
 	}
 }
 
-void get_Headers_response(HttpResponse *res, char **headers)
+void get_Headers_response(http_response_t *res, char **headers)
 {
 	char *headerLine = strdup("");
 	int crlf_len = strlen("\r\n");
@@ -103,7 +103,7 @@ void get_Headers_response(HttpResponse *res, char **headers)
 	*headers = headerLine;
 }
 
-void get_Body_response(HttpResponse *res, char **body)
+void get_Body_response(http_response_t *res, char **body)
 {
 
 	// calculate body size - +1 for null terminator
@@ -125,7 +125,7 @@ void get_Body_response(HttpResponse *res, char **body)
 
 // function uses get_StartLine_response, get_Headers_response and
 // get_Body_response
-int SendHttpResponse(HttpResponse *res, int clientSocket)
+int SendHttpResponse(http_response_t *res, int clientSocket)
 {
 
 	char *StartLine = NULL;
@@ -148,7 +148,7 @@ int SendHttpResponse(HttpResponse *res, int clientSocket)
 
 	response = (char *)malloc(response_size * sizeof(char));
 	if (response == NULL) {
-		perror("Malloc of HttpResponse went wrong");
+		perror("Malloc of http_response_t went wrong");
 		return -1;
 	}
 
@@ -163,7 +163,7 @@ int SendHttpResponse(HttpResponse *res, int clientSocket)
 	return 1;
 }
 
-void freeHttpResponse(HttpResponse *res)
+void freeHttpResponse(http_response_t *res)
 {
 	free(res->starting_line.status_message);
 
@@ -176,7 +176,7 @@ void freeHttpResponse(HttpResponse *res)
 }
 
 // get Http response of Chosen code use status_mappings
-void getHttpStatusLine(HttpResponse *res, HttpStatusCode code)
+void getHttpStatusLine(http_response_t *res, HttpStatusCode code)
 {
 
 	// Declare status_message first!
@@ -193,7 +193,7 @@ void getHttpStatusLine(HttpResponse *res, HttpStatusCode code)
 					    .status_message = status_message};
 }
 
-void addHeader(HttpResponse *res, char *header)
+void addHeader(http_response_t *res, char *header)
 {
 
 	if (res == NULL || header == NULL) {
@@ -213,7 +213,7 @@ void addHeader(HttpResponse *res, char *header)
 	res->header_count++;
 }
 
-void addBody(HttpResponse *res, char *body, ContentType type)
+void addBody(http_response_t *res, char *body, ContentType type)
 {
 	// add body
 	res->body = strdup(body);

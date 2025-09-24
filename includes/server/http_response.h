@@ -27,18 +27,18 @@ typedef struct {
 
 	char *body;
 	int body_size;
-} HttpResponse;
+} http_response_t;
 
-void InitializeHttpResponse(HttpResponse *res);
+void InitializeHttpResponse(http_response_t *res);
 
-int SendHttpResponse(HttpResponse *res, int clientSocket);
+int SendHttpResponse(http_response_t *res, int clientSocket);
 
-void freeHttpResponse(HttpResponse *res);
+void freeHttpResponse(http_response_t *res);
 
-void getHttpStatusLine(HttpResponse *res, HttpStatusCode code);
+void getHttpStatusLine(http_response_t *res, HttpStatusCode code);
 
-void addHeader(HttpResponse *res, char *header);
+void addHeader(http_response_t *res, char *header);
 
-void addBody(HttpResponse *res, char *body, ContentType type);
+void addBody(http_response_t *res, char *body, ContentType type);
 
 #endif

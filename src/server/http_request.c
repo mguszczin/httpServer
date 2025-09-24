@@ -3,18 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct {
-	char *method;
-	char *path;
-	char *protocol;
-
-	char **headers;
-	int header_cnt;
-
-	char *body;
-
-} http_request_t;
-
 void freeHttpRequest(http_request_t *req)
 {
 	// free the allocated space
