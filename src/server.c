@@ -37,12 +37,14 @@ int start_server(int port)
 		return -1;
 	}
 	printf("Binded to port: %d\n", port);
+
 	int max_queue = 5;
 	if (listen(server_socket, max_queue) < 0) { 
 		perror("Listening failed");
 		close(server_socket);
 		return -1;
 	}
+
 	// make new socket for http response
 	int clientsocket;
 	printf("LISTENING TO PORT: %d\n", port);
@@ -50,10 +52,12 @@ int start_server(int port)
                 (struct sockaddr *)&socket_adress, &adresssize)) >= 0) {
 		// create concurrent connection
 		printf("Accepted connection\n");
+                
 		pid_t proces_id = fork();
 		if (proces_id == 0) {
 			close(server_socket);
 			handle_socket(clientsocket);
+                        close(clientsocket);
 			exit(0);
 		} else if (proces_id > 0) {
 			close(clientsocket);

@@ -5,11 +5,13 @@
 
 #include "http_response.h"
 
-static const char *status_mappings[] = {[200] = "OK",
+static const char *status_mappings[] = {
+                                        [200] = "OK",
 					[201] = "Created",
 					[400] = "Bad Request",
 					[404] = "Not Found",
-					[500] = "Internal Server Error"};
+					[500] = "Internal Server Error"
+                                        };
 
 char *get_content_type(ContentType type)
 {

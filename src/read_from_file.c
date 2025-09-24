@@ -3,6 +3,11 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 
+/*
+ * Reads the entire contents of a file into a dynamically allocated buffer.
+ * Returns a pointer to the buffer (caller must free it) on success, or NULL on failure.
+ * If the path points to a directory, NULL is returned.
+ */
 char *getfile(char *filepath)
 {
 	FILE *file = fopen(filepath, "r");
@@ -21,13 +26,13 @@ char *getfile(char *filepath)
 
 	// get file
 	struct stat file_status;
-	if (stat(filepath, &file_status) < 0) {
+	if (fstat(filepath, &file_status) < 0) {
 		fclose(file);
 		return NULL;
 	}
 
 	// allocate memory for importing body from file
-	int file_size = file_status.st_size;
+	size_t file_size = file_status.st_size;
 	char *filecontent = malloc(file_size + 1); // +1 for null terminator
 
 	if (filecontent == NULL) {

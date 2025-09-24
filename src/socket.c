@@ -144,83 +144,54 @@ void get_http_response(int clientsocket, char **buffer, char **prevurl)
 	freeHttpRequest(httpreq);
 }
 
+int dynamic_read_from_socket(char** http_buffer, size_t buffer_size, int clientsocket)
+{
+        ssize_t bytes_read = 0;
+        size_t cur = 0;
+
+        while ((bytes_read = recv(clientsocket, *http_buffer + cur,buffer_size - cur, 0)) > 0) {
+                cur += bytes_read;
+
+                if ((buffer_size) <= cur) {
+                        buffer_size *= 2;
+                        char *tmp = realloc(*http_buffer, buffer_size);
+                        if(!tmp) {
+                                fprintf(stderr, "Failed to reallocate while dynamically reading");
+                                free(*http_buffer);
+                                return -1;
+                        }
+                        *http_buffer = tmp;
+                }
+        }
+
+        if (bytes_read < 0) 
+                return -1;
+        
+        (*http_buffer)[cur] = '\0';
+        return buffer_size;
+}
+
 void handle_socket(int clientsocket)
 {
-	char *http_buffer = NULL;    // buffer for HTTP request data
-	char *inotify_buffer = NULL; // buffer for inotify events
-	char *prevurl = NULL;	     // track previous URL
+        size_t buffer_size = 1;
+        char* http_buffer = (char*)malloc(sizeof(char*) * buffer_size);
+        
+        if (!http_buffer){
+                fprintf(stderr, "Failed to allocate memory for http buffer");
+                return;
+        }
+	
+        buffer_size = dynamic_read_from_socket(&http_buffer, &buffer_size, clientsocket);
+        if (buffer_size == -1) {
+                fprintf(stderr, "Something went wrong when reading from socket");
+                return;
+        }
 
-	int wd, inotify_fd;
-	if (!inotifyInitialize(&wd, &inotify_fd, DIR_PATH)) {
-		perror("handle_socket() - inotify initialized without sucess");
-		close(clientsocket);
-		return;
-	}
+        HttpRequest http_request;
+        initialize_request(&http_request);
+        assign_request(http_buffer, &http_request);
 
-	// Set both clientsocket and inotify_fd to non-blocking mode
-	if (fcntl(clientsocket, F_SETFL, O_NONBLOCK) < 0) {
-		perror("fcntl clientsocket");
-	}
-	if (fcntl(inotify_fd, F_SETFL, O_NONBLOCK) < 0) {
-		perror("fcntl inotify_fd");
-	}
+        
 
-	// Set up poll descriptors
-	struct pollfd fds[2];
-	fds[0].fd = clientsocket;
-	fds[0].events = POLLIN;
-	fds[1].fd = inotify_fd;
-	fds[1].events = POLLIN;
-	while (1) {
-		int poll_result = poll(fds, 2, -1);
-		if (poll_result < 0) {
-			perror("poll");
-			break;
-		}
-
-		// Handle HTTP request events
-		if (fds[0].revents & POLLIN) {
-			int status = dynamic_read(clientsocket, &http_buffer,
-						  SMALL_CHUNK);
-			if (status > 0) {
-				// Process the HTTP request
-				get_http_response(clientsocket, &http_buffer,
-						  &prevurl);
-				free(http_buffer);
-				http_buffer = NULL;
-			} else if (status == 0) {
-				// Connection closed
-				printf("connection closed by socket\n");
-				break;
-			} else {
-				if (errno == ECONNRESET) {
-					printf("Connection reset by peer.\n");
-					break;
-				}
-				perror("dynamic_read (HTTP)");
-			}
-		}
-
-		// Handle inotify events (file changes)
-		if (fds[1].revents & POLLIN) {
-			int status = static_read(inotify_fd, &inotify_buffer,
-						 INOTIFY_RECOMMENDED);
-			if (status > 0) {
-				send_file_update(clientsocket, &inotify_buffer,
-						 &prevurl, status);
-				free(inotify_buffer);
-				inotify_buffer = NULL;
-			} else if (status < 0) {
-				perror("dynamic_read (inotify) doesn't work - "
-				       "191 socket.c");
-			}
-			printf("send update");
-		}
-	}
-	printf("BYE");
 	free(http_buffer);
-	free(inotify_buffer);
-	free(prevurl);
-	close(clientsocket);
-	close(inotify_fd);
 }
