@@ -10,35 +10,57 @@ typedef enum {
 	HTTP_BAD_REQUEST = 400,
 	HTTP_NOT_FOUND = 404,
 	HTTP_INTERNAL_ERROR = 500
-} HttpStatusCode;
+} http_status_code;
 
-typedef enum { HTML, TEXT } ContentType;
+typedef enum {
+        HDR_CACHE_CONTROL = 0,
+        HDR_CONNECTION,
+        HDR_LOCATION,
+        HDR_SET_COOKIE,
+        HDR_WWW_AUTHENTICATE,
+} allowed_headers;
 
-typedef struct {
-	int status_code;
-	char *status_message;
-} StartingLine;
+typedef enum {
+        MIME_HTML = 0,
+        MIME_HTM,
+        MIME_CSS,
+        MIME_JS,
+        MIME_JSON,
+        MIME_TXT,
+        MIME_XML,
 
-typedef struct {
-	StartingLine starting_line;
+        MIME_PNG,
+        MIME_JPG,
+        MIME_JPEG,
+        MIME_GIF,
+        MIME_SVG,
+        MIME_ICO,
 
-	char **headers;
-	int header_count;
+        MIME_PDF,
+        MIME_MP3,
+        MIME_MP4,
+        MIME_WASM,
 
-	char *body;
-	int body_size;
-} http_response_t;
+        MIME_WOFF,
+        MIME_WOFF2,
+        MIME_TTF,
 
-void InitializeHttpResponse(http_response_t *res);
+        MIME_DEFAULT,  // application/octet-stream (fallback)
+} mime_type_e;
 
-int SendHttpResponse(http_response_t *res, int clientSocket);
+typedef struct http_response_t http_response_t;
 
-void freeHttpResponse(http_response_t *res);
+mime_type_e get_content_type(char* url_path, http_response_t* http_response);
 
-void getHttpStatusLine(http_response_t *res, HttpStatusCode code);
+http_response_t* initialize_http_response(http_status_code status_code);
 
-void addHeader(http_response_t *res, char *header);
+int send_http_response(http_response_t *res, int clientSocket);
 
-void addBody(http_response_t *res, char *body, ContentType type);
+void free_http_response(http_response_t *res);
+
+int add_allowed_header(http_response_t *res, allowed_headers header, char* header_value);
+
+int add_body(http_response_t *res, char *body, mime_type_e type);
+
 
 #endif
