@@ -9,39 +9,19 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "http_request.h"
-#include "http_response.h"
-#include "inotifyConfiguration.h"
-#include "read_from_file.h"
-#include "server.h"
+#include "server/http_request.h"
+#include "server/http_response.h"
+#include "inotify/inotifyConfiguration.h"
+#include "file_reader/read_from_file.h"
+#include "server/server.h"
 
 #define BUFFER_SIZE 256
 char *DIR_PATH = "file_read";
 
-char *get_file_path(char *filename)
-{
-	if (filename == NULL) {
-		printf("NULL value of file path\n");
-		return NULL;
-	}
-
-	// Calculate new size length of FILE_DIR + length of *filename + 1 for
-	// null terminator.
-	int newsize = strlen(filename) + strlen(DIR_PATH) + 1;
-	char *result = malloc(newsize);
-	if (!result) {
-		perror("malloc failed");
-		return NULL;
-	}
-
-	// Copy FILE_DIR into result and append the filename.
-	// strcpy first because we have unitialized memory
-	strcpy(result, DIR_PATH);
-	strcat(result, filename);
-
-	return result;
-}
-
+/*
+* Dynamic read from socket using realloc so that space allocation for buffer is almost constant. 
+* Http buffer ends with null terminator so that the end of string is marked (made for functions from string.h lib)
+*/
 int dynamic_read_from_socket(char** http_buffer, size_t buffer_size, int clientsocket)
 {
         ssize_t bytes_read = 0;
@@ -71,7 +51,8 @@ int dynamic_read_from_socket(char** http_buffer, size_t buffer_size, int clients
         return buffer_size;
 }
 
-void send_response(http_request_t* http_request, int clientsocket) 
+// REMEMBER TO FREE HTTP REQUEST
+void choose_response(http_request_t* http_request, int clientsocket) 
 {
         if (strcmp(http_request->method, "GET") == 0) {
 
@@ -79,16 +60,7 @@ void send_response(http_request_t* http_request, int clientsocket)
 
         }
 
-        http_response_t* http_response;
-
-        if (!http_response) {
-                fprintf(stderr, "Something went wrong when creating http response");
-                return;
-        }
-
-        int status = send(clientsocket, http_response, strlen(http_response), 0);
-        if (status == -1) 
-                fprintf(stderr, "Sending data to socket went wrong");
+        
 }
 
 void handle_socket(int clientsocket)
@@ -115,7 +87,7 @@ void handle_socket(int clientsocket)
                 return;
         }
 
-        send_response(http_request, clientsocket);
+        choose_response(http_request, clientsocket);
 
 	free(http_buffer);
 }

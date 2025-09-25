@@ -5,7 +5,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "inotifyConfiguration.h"
+#include "inotify/inotifyConfiguration.h"
 
 bool inotifyInitialize(int *wd, int *fd, char *dirPath)
 {

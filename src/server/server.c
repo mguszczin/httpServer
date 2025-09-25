@@ -6,8 +6,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "server.h"
-#include "socket.h"
+#include "server/server.h"
+#include "server/socket.h"
 
 /*
  * Function that initializes a server on the given port.

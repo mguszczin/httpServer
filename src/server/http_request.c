@@ -1,11 +1,15 @@
-#include "http_request.h"
+#include "server/http_request.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+/*
+* We can free anything without checking because 
+* request is always made using calloc (assign_request func) 
+* so the allocated memory will always be freed here
+*/
 void freeHttpRequest(http_request_t *req)
 {
-	// free the allocated space
 	free(req->method);
 	free(req->path);
 	free(req->protocol);
@@ -18,6 +22,10 @@ void freeHttpRequest(http_request_t *req)
 	free(req->body);
 }
 
+/*
+* Simple helper function for assign request
+* Return 0 on sucess, -1 on failure
+*/
 int get_request_line(char** request_line, http_request_t** http_request) 
 {
 	char *method = strtok(*request_line, " ");
@@ -87,7 +95,10 @@ int get_body(char **request_line, http_request_t** http_request)
         return 0;
 }
 
-// the struct must have method, path and protocol if not -1
+/*
+*The struct must have method, path and protocol if not -1
+*TO DO: we can check if the problem is on our side or on clinet (wrong request)
+*/
 http_request_t* assign_request(char *raw_request)
 {       
         http_request_t *http_request = calloc(1, sizeof(http_request_t));
