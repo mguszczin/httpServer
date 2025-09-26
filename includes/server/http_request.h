@@ -15,4 +15,6 @@ typedef struct {
 
 http_request_t* assign_request(char *raw_request);
 
+void freeHttpRequest(http_request_t *req);
+
 #endif 

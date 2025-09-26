@@ -26,9 +26,9 @@ void freeHttpRequest(http_request_t *req)
 * Simple helper function for assign request
 * Return 0 on sucess, -1 on failure
 */
-int get_request_line(char** request_line, http_request_t** http_request) 
+int get_request_line(char* request_line, http_request_t** http_request) 
 {
-	char *method = strtok(*request_line, " ");
+	char *method = strtok(request_line, " ");
 	char *path = strtok(NULL, " ");
 	char *protocol = strtok(NULL, " ");
 
@@ -53,9 +53,9 @@ int get_request_line(char** request_line, http_request_t** http_request)
 }
 
 
-int get_headers(char **request_line, http_request_t** http_request)
+int get_headers(http_request_t** http_request)
 {
-        // dynamically allocate all headers
+        char* request_line;
 	while ((request_line = strtok(NULL, "\r\n")) &&
 	       strlen(request_line) > 0) {
         
@@ -81,11 +81,13 @@ int get_headers(char **request_line, http_request_t** http_request)
         return 0;
 }
 
-int get_body(char **request_line, http_request_t** http_request)
+int get_body(http_request_t** http_request)
 {
-        char *body = strtok(NULL, "\r\n");
-	if (!body) 
+        char *body = strtok(NULL, " ");
+	if (!body) {
+                (*http_request)->body = NULL;
                 return 0;
+        }
         
         char* new_body = strdup(body);
         if (!new_body)
@@ -106,6 +108,7 @@ http_request_t* assign_request(char *raw_request)
 		return NULL;
 
 	// copy request so we don't modify the main string
+
 	char *reqcp = strdup(raw_request);
 	char *request_line = strtok(reqcp, "\r\n");
 	if (!request_line) {
@@ -113,16 +116,16 @@ http_request_t* assign_request(char *raw_request)
                 free(http_request);
 		return NULL;
 	}
+
         // need to free reqcp on failure 
-	if (get_request_line(&request_line, &http_request) == -1 ||
-	get_header(&request_line, &http_request) == -1 ||
-        get_body(&request_line, &http_request) == -1) {
+	if (get_request_line(request_line, &http_request) == -1 ||
+            get_headers(&http_request) == -1 ||
+            get_body(&http_request) == -1) {
                 freeHttpRequest(http_request);
                 free(reqcp);
                 return NULL;
         }
 
-
 	free(reqcp);
-	return 1;
+	return http_request;
 }

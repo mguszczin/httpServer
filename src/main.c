@@ -1,4 +1,4 @@
-#include "server.h"
+#include "server/server.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -11,11 +11,11 @@
  * to start on a different port if provided as a command-line argument.
  */
 
-int validate_input(int* port, char** argv) {
+int validate_input(int* port, char* argv) {
         char *endptr;
         errno = 0;
 
-        long val = strtol(argv[1], &endptr, 10);
+        long val = strtol(argv, &endptr, 10);
 
         if (errno != 0) {
                 perror("strtol failed");
@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
 
         int port = DEFAULT_PORT;
 
-        if (argc == 2 && validate_input(&port, argv) != 0) {
+        if (argc == 2 && validate_input(&port, argv[1]) != 0) {
                 return 1;
         } else if (argc > 2) {
                 fprintf(stderr, "Too many arguments given\n");

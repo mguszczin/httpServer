@@ -14,7 +14,7 @@ SRCS := $(wildcard $(SRC_DIR)/**/*.c) $(wildcard $(SRC_DIR)/*.c)
 OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 
 # Executable name
-TARGET = server_app
+TARGET = server
 
 # Create obj directories automatically
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c

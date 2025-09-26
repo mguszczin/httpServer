@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <stdbool.h>
 #include <time.h> 
@@ -26,7 +27,7 @@ typedef struct {
         bool allowed;
 } header_t;
 
-typedef struct {
+struct http_response_t {
 	start_line_t starting_line;
 
 	header_t* headers;
@@ -34,7 +35,7 @@ typedef struct {
 
 	char *body;
 	int body_size;
-} http_response_t;
+};
 
 typedef struct {
         const char *ext;
@@ -89,14 +90,14 @@ static const char* allowed_header_names[] = {
         "WWW-Authenticate",   
 };
 
-static char* find_extension(const char* path) 
+static const char* find_extension(const char* path) 
 {
         const char* dot = strrchr(path, '.');  
         if (!dot || dot == path) return NULL; 
         return dot + 1;
 }
 
-static mime_type_e lookup_mime_type(char* ext) {
+static mime_type_e lookup_mime_type(const char* ext) {
         if (!ext)
                 return MIME_DEFAULT; 
         
@@ -108,12 +109,33 @@ static mime_type_e lookup_mime_type(char* ext) {
         return MIME_DEFAULT; 
 }
 
-mime_type_e get_content_type(char* url_path, http_response_t* http_response) 
+mime_type_e get_content_type(char* url_path) 
 {
-        char *ext = find_extension(url_path);
+        const char *ext = find_extension(url_path);
         mime_type_e mime = lookup_mime_type(ext);
 
         return mime;
+}
+
+int set_start_line(http_response_t *res, http_status_code status_code)
+{
+
+	char *status_message;
+
+	if (status_code < 0 || status_mappings[status_code] == NULL) {
+                fprintf(stderr, "Unknown status code");
+                return -1;
+	}
+
+        status_message = strdup(status_mappings[status_code]);
+        if (!status_message) {
+                fprintf(stderr, "Out of memory");
+                return -1;
+        }
+
+	res->starting_line = (start_line_t){.status_code = status_code,
+					    .status_message = status_message};
+        return 0;
 }
 
 http_response_t* initialize_http_response(http_status_code status_code)
@@ -144,25 +166,45 @@ http_response_t* initialize_http_response(http_status_code status_code)
         return res;
 }
 
-int set_start_line(http_response_t *res, http_status_code status_code)
+static int add_header(http_response_t *res, int header_index, const char* header_value, bool allowed) 
 {
-
-	char *status_message;
-
-	if (status_code < 0 || status_mappings[status_code] == NULL) {
-                fprintf(stderr, "Unknown status code");
-                return -1;
+        if (!res || !header_value) {
+		fprintf(stderr, "Error: NULL input to add_header\n");
+		return -1;
 	}
 
-        status_message = strdup(status_mappings[status_code]);
-        if (!status_message) {
-                fprintf(stderr, "Out of memory");
+        char* value_copy = strdup(header_value);
+        if (!value_copy) {
+                fprintf(stderr, "Wrong Memory allocation");
                 return -1;
         }
 
-	res->starting_line = (start_line_t){.status_code = status_code,
-					    .status_message = status_message};
+	header_t* tmp =
+	    realloc(res->headers, (res->header_count + 1) * sizeof(header_t));
+	if (tmp == NULL) {
+                free(value_copy);
+		perror("Malloc went wrong while adding a header");
+		return -1;
+	}
+
+	res->headers = tmp;
+	res->headers[res->header_count] = (header_t){
+                .allowed = allowed,
+                .header_index = header_index,
+                .value = value_copy
+        };
+	res->header_count++;
         return 0;
+}
+
+int add_allowed_header(http_response_t *res, allowed_headers header, const char* header_value)
+{
+        return add_header(res, header, header_value, true);
+}
+
+static int add_automatic_header(http_response_t *res, automatic_header header, const char* header_value)
+{
+        return add_header(res, header, header_value, false);
 }
 
 int get_start_line_response(http_response_t *res, char **start_line)
@@ -178,7 +220,7 @@ int get_start_line_response(http_response_t *res, char **start_line)
 		return -1;
 	}
 
-	int status = snprintf(*start_line, start_line_size, "HTTP/1.1 %d %s\r\n",
+	snprintf(*start_line, start_line_size, "HTTP/1.1 %d %s\r\n",
 			      res->starting_line.status_code,
 			      res->starting_line.status_message);
 	return 0;
@@ -217,6 +259,39 @@ void copy_header(char** header_line, header_t header) {
 
         memcpy(*header_line, "\r\n", strlen("\r\n"));
         *header_line += strlen("\r\n");
+}
+
+void print_response_crlf_nicely(const char *response) {
+    size_t i = 0;
+    int line_num = 1;
+
+    printf("=== HTTP Response Visualization ===\n");
+    printf("Line %d: ", line_num);
+
+    while (i < strlen(response)) {
+        if (response[i] == '\r') {
+            if (i + 1 < strlen(response) && response[i + 1] == '\n') {
+                printf("<CRLF>\n");
+                i++; // skip '\n'
+                line_num++;
+                if (i + 1 < strlen(response)) {
+                    printf("Line %d: ", line_num);
+                }
+            } else {
+                printf("\\r");
+            }
+        } else if (response[i] == '\n') {
+            printf("\\n\n");
+            line_num++;
+            if (i + 1 < strlen(response)) {
+                printf("Line %d: ", line_num);
+            }
+        } else {
+            putchar(response[i]);
+        }
+        i++;
+    }
+    printf("\n=== End of Response ===\n");
 }
 
 int get_headers_response(http_response_t *res, char **headers)
@@ -260,7 +335,7 @@ int get_body_response(http_response_t *res, char **body)
 	int body_size = strlen(res->body) + 1;
 
 	*body = (char *)malloc(body_size * sizeof(char));
-	if (!body) {
+	if (!*body) {
 		perror("Malloc of Body went wrong");
 		return -1;
 	}
@@ -307,16 +382,19 @@ int send_http_response(http_response_t *res, int clientSocket)
 
 	// merge all three parts
 	snprintf(response, response_size, "%s%s%s", start_line, headers, body);
-
+        print_response_crlf_nicely(response);
 	// send http response to clientsocket
-	if (send(clientSocket, response, strlen(response), 0) < 0) {
+        int val;
+	if ((val = write(clientSocket, response, strlen(response))) < 0) {
 		perror("write failed");
 	}
+        printf("val : %d\nresponse size : %ld \n", val, strlen(response));
+        printf("body size: %d\nstrlen body:%ld\n", res->body_size, strlen(body));
         free(start_line);
         free(headers);
         free(body);
 	free(response);
-	return 1;
+	return 0;
 }
 
 void free_http_response(http_response_t *res)
@@ -332,53 +410,11 @@ void free_http_response(http_response_t *res)
 	free(res);
 }
 
-static int add_header(http_response_t *res, int header_index, char* header_value, bool allowed) 
-{
-        if (!res || !header_value) {
-		fprintf(stderr, "Error: NULL input to add_header\n");
-		return -1;
-	}
-
-        char* value_copy = strdup(header_value);
-        if (!value_copy) {
-                fprintf(stderr, "Wrong Memory allocation");
-                return -1;
-        }
-
-	char **tmp =
-	    realloc(res->headers, (res->header_count + 1) * sizeof(header_t));
-	if (tmp == NULL) {
-                free(value_copy);
-		perror("Malloc went wrong while adding a header");
-		return -1;
-	}
-
-	res->headers = tmp;
-	res->headers[res->header_count] = (header_t){
-                .allowed = allowed,
-                .header_index = header_index,
-                .value = value_copy
-        };
-	res->header_count++;
-        return 0;
-}
-
-int add_allowed_header(http_response_t *res, allowed_headers header, char* header_value)
-{
-        return add_header(res, header, header_value, true);
-}
-
-static int add_automatic_header(http_response_t *res, automatic_header header, char* header_value)
-{
-        return add_header(res, header, header_value, false);
-}
-
-
 // remember content type and lenght 
 /*
 TO DO: change function so that you can add a few headers and deal with memory error
 */
-int add_body(http_response_t *res, char *body, mime_type_e type)
+int add_body(http_response_t *res, const char *body, mime_type_e type)
 {
         if (!res || !body) {
                 fprintf(stderr, "Null pointers given");
@@ -391,13 +427,11 @@ int add_body(http_response_t *res, char *body, mime_type_e type)
 
         if (add_automatic_header(res, HDR_CONTENT_LENGTH, size) < 0) {
                 res->body_size = 0;
-                free(body);
                 return -1;
         }
 
         if (add_automatic_header(res, HDR_CONTENT_TYPE, mime_types[type].mime) < 0) {
                 res->body_size = 0;
-                free(body);
                 return -1;
         }
 

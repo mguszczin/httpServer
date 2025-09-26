@@ -50,7 +50,7 @@ typedef enum {
 
 typedef struct http_response_t http_response_t;
 
-mime_type_e get_content_type(char* url_path, http_response_t* http_response);
+mime_type_e get_content_type(char* url_path);
 
 http_response_t* initialize_http_response(http_status_code status_code);
 
@@ -58,9 +58,9 @@ int send_http_response(http_response_t *res, int clientSocket);
 
 void free_http_response(http_response_t *res);
 
-int add_allowed_header(http_response_t *res, allowed_headers header, char* header_value);
+int add_allowed_header(http_response_t *res, allowed_headers header, const char* header_value);
 
-int add_body(http_response_t *res, char *body, mime_type_e type);
+int add_body(http_response_t *res, const char *body, mime_type_e type);
 
 
 #endif
