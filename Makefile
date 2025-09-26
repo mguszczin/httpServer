@@ -1,25 +1,34 @@
+# Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -Iinclude
-TARGET = server
+CFLAGS = -Wall -Wextra -Werror -Iincludes -g
+
+# Directories
 SRC_DIR = src
-INC_DIR = include
-OBJ_DIR = exec
-SRC = $(wildcard $(SRC_DIR)/*.c)
+OBJ_DIR = obj
+INCLUDES = includes
 
-# Create object directory if it doesn't exist
-$(shell mkdir -p $(OBJ_DIR))
+# Source files (all .c files in src subfolders)
+SRCS := $(wildcard $(SRC_DIR)/**/*.c) $(wildcard $(SRC_DIR)/*.c)
 
-# Define object files in the 'exec' directory
-OBJ = $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+# Object files
+OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 
-# Convert 'src/main.c' -> 'exec/main.o'
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(INC_DIR)/*.h
+# Executable name
+TARGET = server
+
+# Create obj directories automatically
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Build the final executable
-$(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ)
+# Default target
+all: $(TARGET)
 
-# Clean compiled files
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) $^ -o $@
+
+# Clean
 clean:
-	rm -f $(TARGET) $(OBJ_DIR)/*.o
+	rm -rf $(OBJ_DIR) $(TARGET)
+
+.PHONY: all clean

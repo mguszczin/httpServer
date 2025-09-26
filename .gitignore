@@ -3,5 +3,6 @@
 testdir/
 vscode/
 exec/
+obj/
 *.exec
 *.exe
