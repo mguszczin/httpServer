@@ -2,6 +2,7 @@
 *.swp
 testdir/
 vscode/
+.vscode/
 exec/
 obj/
 *.exec
