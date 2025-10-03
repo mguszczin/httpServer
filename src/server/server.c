@@ -57,7 +57,7 @@ int start_server(int port)
 		if (proces_id == 0) {
 			close(server_socket);
 			handle_socket(clientsocket);
-                        close(clientsocket);
+			close(clientsocket);
 			exit(0);
 		} else if (proces_id > 0) {
 			close(clientsocket);

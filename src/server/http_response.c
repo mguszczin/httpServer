@@ -384,11 +384,17 @@ int send_http_response(http_response_t *res, int clientSocket)
 	snprintf(response, response_size, "%s%s%s", start_line, headers, body);
         print_response_crlf_nicely(response);
 	// send http response to clientsocket
-        int val;
-	if ((val = write(clientSocket, response, strlen(response))) < 0) {
-		perror("write failed");
-	}
-        printf("val : %d\nresponse size : %ld \n", val, strlen(response));
+        size_t total = 0;
+        size_t to_write = strlen(response);
+        while (total < to_write) {
+                ssize_t sent = write(clientSocket, response + total, to_write - total);
+                if (sent <= 0) {
+                        perror("write failed");
+                        break;
+                }
+                total += sent;
+        }
+        printf("val : %ld\nresponse size : %ld \n", total, strlen(response));
         printf("body size: %d\nstrlen body:%ld\n", res->body_size, strlen(body));
         free(start_line);
         free(headers);

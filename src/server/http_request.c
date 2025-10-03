@@ -104,8 +104,10 @@ int get_body(http_request_t** http_request)
 http_request_t* assign_request(char *raw_request)
 {       
         http_request_t *http_request = calloc(1, sizeof(http_request_t));
-	if (!http_request)
-		return NULL;
+	if (!http_request) {
+                perror("Malloc of http_request_t went wrong");
+                return NULL;
+        }
 
 	// copy request so we don't modify the main string
 
@@ -114,6 +116,7 @@ http_request_t* assign_request(char *raw_request)
 	if (!request_line) {
 		free(reqcp);
                 free(http_request);
+                fprintf(stderr, "Request line is NULL\n");
 		return NULL;
 	}
 
@@ -121,6 +124,7 @@ http_request_t* assign_request(char *raw_request)
 	if (get_request_line(request_line, &http_request) == -1 ||
             get_headers(&http_request) == -1 ||
             get_body(&http_request) == -1) {
+                fprintf(stderr, "Failed to parse HTTP request\n");
                 freeHttpRequest(http_request);
                 free(reqcp);
                 return NULL;

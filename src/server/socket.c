@@ -22,41 +22,51 @@ char *DIR_PATH = "file_read";
 * Dynamic read from socket using realloc so that space allocation for buffer is almost constant. 
 * Http buffer ends with null terminator so that the end of string is marked (made for functions from string.h lib)
 */
-int dynamic_read_from_socket(char** http_buffer, int buffer_size, int clientsocket)
+int dynamic_read_from_socket(char **http_buffer, int buffer_size, int clientsocket)
 {
         int bytes_read = 0;
         int cur = 0;
 
-        while ((bytes_read = recv(clientsocket, *http_buffer + cur,buffer_size - cur, 0)) > 0) {
+        if (*http_buffer == NULL) {
+                *http_buffer = malloc(buffer_size);
+                if (!*http_buffer) return -1;
+        }
+
+        while ((bytes_read = recv(clientsocket, *http_buffer + cur, buffer_size - cur - 1, 0)) > 0) {
                 cur += bytes_read;
-
-                if ((buffer_size) > cur) 
-                        continue;
-
-                buffer_size *= 2;
-                char *tmp = realloc(*http_buffer, buffer_size);
-                if(!tmp) {
-                        fprintf(stderr, "Failed to reallocate while dynamically reading");
-                        free(*http_buffer);
-                        return -1;
+                (*http_buffer)[cur] = '\0'; 
+      
+                if (strstr(*http_buffer, "\r\n\r\n")) {
+                        break;
                 }
-                *http_buffer = tmp;
-                
+        
+                if (cur >= buffer_size - 1) {
+                        buffer_size *= 2;
+                        char *tmp = realloc(*http_buffer, buffer_size);
+                        if (!tmp) {
+                                fprintf(stderr, "Failed to reallocate while dynamically reading\n");
+                                free(*http_buffer);
+                                return -1;
+                        }
+                        *http_buffer = tmp;
+                }
         }
 
         if (bytes_read < 0) 
                 return -1;
-        
+
         (*http_buffer)[cur] = '\0';
-        return buffer_size;
+        return cur;
 }
 
 // REMEMBER TO FREE HTTP REQUEST
 void choose_response(http_request_t* http_request, int client_socket) 
 {       
         if (strcmp(http_request->method, "GET") == 0) {
-
+                handle_get_request(http_request, client_socket);
+                return;
         }
+        /* No other request supported yet */
         http_response_t* http_response = initialize_http_response(HTTP_NOT_FOUND);
         const char* not_found_body =
                 "<html>\n"
@@ -73,29 +83,32 @@ void choose_response(http_request_t* http_request, int client_socket)
                 "    <p>Page Not Found</p>\n"
                 "  </body>\n"
                 "</html>\n";
-        printf("%ld : strlen\n", strlen(not_found_body));
-        //add_body(http_response, not_found_body, MIME_HTML);
+        
+        add_body(http_response, not_found_body, MIME_HTML);
         send_http_response(http_response, client_socket);       
         free_http_response(http_response);
 }
 
 void handle_socket(int clientsocket)
 {
-        int buffer_size = 1;
+        int buffer_size = 2;
         char* http_buffer = (char*)malloc(sizeof(char*) * buffer_size);
         
         if (!http_buffer) {
                 fprintf(stderr, "Failed to allocate memory for http buffer");
                 return;
         }
+
 	
         buffer_size = dynamic_read_from_socket(&http_buffer, buffer_size, clientsocket);
+        printf("Received request:\n%s\n", http_buffer);
+        printf("Buffer size: %d\n", buffer_size);
         if (buffer_size == -1) {
                 fprintf(stderr, "Something went wrong when reading from socket");
                 free(http_buffer);
                 return;
         }
-
+        
         http_request_t* http_request = assign_request(http_buffer);
         if (!http_request) {
                 fprintf(stderr, "Failed to allocate memory for http request");
