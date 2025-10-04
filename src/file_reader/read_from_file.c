@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <errno.h>
+#include "read_from_file.h"
 
 /*
  * Reads the entire contents of a file into a dynamically allocated buffer.
@@ -34,6 +36,7 @@ char *getfile(char *filepath)
 	if (filecontent == NULL) {
 		perror("Memory allocation failed");
 		fclose(file);
+                errno = ENOMEM;
 		return NULL;
 	}
 
@@ -50,4 +53,9 @@ char *getfile(char *filepath)
 	fclose(file);
 
 	return filecontent;
+}
+
+
+void free_file_buffer(char *file) {
+	free(file);
 }

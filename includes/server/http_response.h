@@ -45,6 +45,8 @@ typedef enum {
         MIME_WOFF2,
         MIME_TTF,
 
+        MIME_EVENT, 
+
         MIME_DEFAULT,  // application/octet-stream (fallback)
 } mime_type_e;
 

@@ -67,23 +67,29 @@ static mime_map mime_types[] = {
         { "woff2",   "font/woff2" },
         { "ttf",     "font/ttf" },
 
+        { "event",   "text/event-stream; charset=UTF-8" },
+
         { NULL,      "application/octet-stream" } 
 };
 
 typedef enum {
-        HDR_CONTENT_LENGTH = 0,
+        HDR_CACHE_CONTROL = 0,
+        HDR_CONTENT_LENGTH,
         HDR_CONTENT_TYPE,
-        HDR_DATE
+        HDR_DATE,
+        HDR_CONNECTION
 } automatic_header;
 
 static const char* automatic_header_names[] = {
+        "Cache-Control",   
         "Content-Length",      
         "Content-Type",  
-        "Date",     
+        "Date",
+        "Connection"      
 };
 
-static const char* allowed_header_names[] = {
-        "Cache-Control",       
+static const char* allowed_header_names[] = {    
+        "Cache-Control",   
         "Connection",                                                   
         "Location",            
         "Set-Cookie",         
@@ -332,7 +338,7 @@ int get_body_response(http_response_t *res, char **body)
 {
 
 	// calculate body size - +1 for null terminator
-	int body_size = strlen(res->body) + 1;
+	int body_size = 1 + res->body_size;
 
 	*body = (char *)malloc(body_size * sizeof(char));
 	if (!*body) {
@@ -394,13 +400,64 @@ int send_http_response(http_response_t *res, int clientSocket)
                 }
                 total += sent;
         }
-        printf("val : %ld\nresponse size : %ld \n", total, strlen(response));
-        printf("body size: %d\nstrlen body:%ld\n", res->body_size, strlen(body));
         free(start_line);
         free(headers);
         free(body);
 	free(response);
 	return 0;
+}
+
+int send_http_sse_response_main_body(http_response_t *res, int client_socket) 
+{
+        if(add_internal_header(res, HDR_CONTENT_TYPE, mime_types[MIME_EVENT].mime) == -1)
+                return -1;
+
+        if(add_internal_header(res, HDR_CACHE_CONTROL, "no-cache") == -1)
+                return -1;
+        
+        if(add_internal_header(res, HDR_CONNECTION, "keep-alive") == -1)
+                return -1;
+        
+        res->body_size = 0;
+        free(res->body);
+
+        res->body = NULL;
+
+        return send_http_response(res, client_socket);
+
+}
+
+int send_http_sse_response_message(const char* message, int client_socket) 
+{
+        if (!message) {
+                fprintf(stderr, "Null message given");
+                return -1;
+        }
+
+        size_t msg_len = strlen(message);
+        size_t total_len = msg_len + 10; // "data: " + "\r\n\r\n"
+
+        char* sse_message = malloc(total_len + 1); 
+        if (!sse_message) {
+                fprintf(stderr, "Memory allocation failed for SSE message");
+                return -1;
+        }
+
+        snprintf(sse_message, total_len + 1, "data: %s\r\n\r\n", message);
+
+        size_t total = 0;
+        while (total < total_len) {
+                ssize_t sent = write(client_socket, sse_message + total, total_len - total);
+                if (sent <= 0) {
+                        perror("write failed");
+                        free(sse_message);
+                        return -1;
+                }
+                total += sent;
+        }
+
+        free(sse_message);
+        return 0;
 }
 
 void free_http_response(http_response_t *res)
