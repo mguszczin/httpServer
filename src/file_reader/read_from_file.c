@@ -14,6 +14,7 @@ char *getfile(char *filepath)
 {
 	FILE *file = fopen(filepath, "r");
 	if (file == NULL) {
+                errno = ENOENT;
 		return NULL;
 	}
 
@@ -21,11 +22,13 @@ char *getfile(char *filepath)
 	fstat(fileno(file), &st);
 	if (fstat(fileno(file), &st) < 0) {
 		fclose(file);
+                errno = EIO;
 		return NULL;
 	}
 
         if (S_ISDIR(st.st_mode)) {
                 fclose(file);
+                errno = EISDIR;
                 return NULL;
         }
 
@@ -45,6 +48,7 @@ char *getfile(char *filepath)
                 perror("File reading error");
                 free(filecontent);
                 fclose(file);
+                errno = EIO;
                 return NULL;
         }
 

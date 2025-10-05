@@ -59,6 +59,8 @@ http_response_t* initialize_http_response(http_status_code status_code);
 
 int send_http_response(http_response_t *res, int clientSocket);
 
+int send_http_sse_response_message(const char* message, int client_socket);
+
 void free_http_response(http_response_t *res);
 
 int add_allowed_header(http_response_t *res, allowed_headers header, const char* header_value);

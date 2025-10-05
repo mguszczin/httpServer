@@ -59,7 +59,6 @@ int dynamic_read_from_socket(char **http_buffer, int buffer_size, int clientsock
         return cur;
 }
 
-// REMEMBER TO FREE HTTP REQUEST
 void choose_response(http_request_t* http_request, int client_socket) 
 {       
         if (strcmp(http_request->method, "GET") == 0) {

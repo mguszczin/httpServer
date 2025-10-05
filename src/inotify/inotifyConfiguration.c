@@ -7,7 +7,7 @@
 
 #include "inotify/inotifyConfiguration.h"
 
-bool inotifyInitialize(int *wd, int *fd, char *dirPath)
+bool inotifyInitialize(int *wd, int *fd, char *path)
 {
 	// Initialize inotify
 	int inotify_fd = inotify_init();
@@ -16,7 +16,7 @@ bool inotifyInitialize(int *wd, int *fd, char *dirPath)
 		return false;
 	}
 	// Set inotify to watch directory
-	int watch = inotify_add_watch(inotify_fd, dirPath, IN_MODIFY);
+	int watch = inotify_add_watch(inotify_fd, path, IN_MODIFY);
 	if (watch < 0) {
 		printf("i am true then\n");
 		perror("inotify_add_watch");
