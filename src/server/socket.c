@@ -67,26 +67,8 @@ void choose_response(http_request_t* http_request, int client_socket)
                 return;
         }
         /* No other request supported yet */
-        http_response_t* http_response = initialize_http_response(HTTP_NOT_FOUND);
-        const char* not_found_body =
-                "<html>\n"
-                "  <head>\n"
-                "    <title>404 Not Found</title>\n"
-                "    <style>\n"
-                "      body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }\n"
-                "      h1 { font-size: 50px; color: #cc0000; }\n"
-                "      p { font-size: 20px; color: #333333; }\n"
-                "    </style>\n"
-                "  </head>\n"
-                "  <body>\n"
-                "    <h1>404</h1>\n"
-                "    <p>Page Not Found</p>\n"
-                "  </body>\n"
-                "</html>\n";
-        
-        add_body(http_response, not_found_body, MIME_HTML);
-        send_http_response(http_response, client_socket);       
-        free_http_response(http_response);
+        send_http_error_response(HTTP_BAD_REQUEST, client_socket);
+        return;
 }
 
 void handle_socket(int clientsocket)

@@ -54,23 +54,25 @@ bool is_safe_path(const char *base, const char *path) {
 }
 
 
-void handle_normal_get(http_request_t* http_request, int client_socket, 
-                        enum get_request_type request_type) 
+void handle_normal_get(http_request_t* http_request, int client_socket) 
 {
         char full_path[PATH_MAX];
-        snprintf(full_path, sizeof(full_path), "%s%s", RELATIVE_PATH, http_request->path);
+        snprintf(full_path, sizeof(full_path), "%s%s", RELATIVE_PATH,
+                                                 http_request->path);
 
         if (!is_safe_path(RELATIVE_PATH, http_request->path)) {
-                // Return 403 Forbidden
+                send_http_error_response(HTTP_FORBIDDEN, client_socket);
                 return;
         }
 
         char* file = read_from_file(full_path);
         if (file == NULL) {
                 if (errno == ENOMEM) {
-                        // Return 500 Internal Server Error
+                        send_http_error_response(HTTP_INTERNAL_ERROR, 
+                                                        client_socket);
                 } else {
-                        // Return 404 Not Found
+                        send_http_error_response(HTTP_NOT_FOUND, 
+                                                        client_socket);
                 }
                 return;
         }
@@ -78,14 +80,16 @@ void handle_normal_get(http_request_t* http_request, int client_socket,
         http_response_t* response = create_http_response(200, "OK");
         if (!response) {
                 free(file);
-                // Return 500 Internal Server Error
+                send_http_error_response(HTTP_INTERNAL_ERROR, 
+                                                        client_socket);
                 return;
         }
 
         if(add_body(response, file, get_content_type(full_path)) == -1) {
                 free(file);
                 freeHttpResponse(response);
-                // Return 500 Internal Server Error
+                send_http_error_response(HTTP_INTERNAL_ERROR, 
+                                                        client_socket);
                 return;
         }
 
@@ -102,7 +106,7 @@ void handle_event(http_request_t* http_request, int client_socket)
 
         char* event_path = malloc(sizeof(char) * (path_len - suffix_len + 1));
         if (!event_path) {
-                // Return 500 Internal Server Error
+                send_http_error_response(HTTP_INTERNAL_ERROR, client_socket);
                 return;
         }
 
@@ -110,10 +114,11 @@ void handle_event(http_request_t* http_request, int client_socket)
         event_path[path_len - suffix_len] = '\0';
 
         char full_path[PATH_MAX];
-        snprintf(full_path, sizeof(full_path), "%s%s", RELATIVE_PATH, event_path);
+        snprintf(full_path, sizeof(full_path), "%s%s", RELATIVE_PATH, 
+                                                                event_path);
 
         if (!is_safe_path(RELATIVE_PATH, event_path)) {
-                // Return 403 Forbidden
+                send_http_error_response(HTTP_FORBIDDEN, client_socket);
                 free(event_path);
                 return;
         }
