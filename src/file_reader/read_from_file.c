@@ -2,16 +2,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <errno.h>
+#include "file_reader/read_from_file.h"
 
 /*
  * Reads the entire contents of a file into a dynamically allocated buffer.
  * Returns a pointer to the buffer (caller must free it) on success, or NULL on failure.
  * If the path points to a directory, NULL is returned.
  */
-char *getfile(char *filepath)
+char *read_from_file(char *filepath)
 {
 	FILE *file = fopen(filepath, "r");
 	if (file == NULL) {
+                errno = ENOENT;
 		return NULL;
 	}
 
@@ -19,11 +22,13 @@ char *getfile(char *filepath)
 	fstat(fileno(file), &st);
 	if (fstat(fileno(file), &st) < 0) {
 		fclose(file);
+                errno = EIO;
 		return NULL;
 	}
 
         if (S_ISDIR(st.st_mode)) {
                 fclose(file);
+                errno = EISDIR;
                 return NULL;
         }
 
@@ -34,6 +39,7 @@ char *getfile(char *filepath)
 	if (filecontent == NULL) {
 		perror("Memory allocation failed");
 		fclose(file);
+                errno = ENOMEM;
 		return NULL;
 	}
 
@@ -42,6 +48,7 @@ char *getfile(char *filepath)
                 perror("File reading error");
                 free(filecontent);
                 fclose(file);
+                errno = EIO;
                 return NULL;
         }
 
@@ -50,4 +57,9 @@ char *getfile(char *filepath)
 	fclose(file);
 
 	return filecontent;
+}
+
+
+void free_file_buffer(char *file) {
+	free(file);
 }

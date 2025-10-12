@@ -8,6 +8,7 @@ typedef enum {
         HTTP_OK = 200,
 	HTTP_CREATED = 201,
 	HTTP_BAD_REQUEST = 400,
+        HTTP_FORBIDDEN = 403,
 	HTTP_NOT_FOUND = 404,
 	HTTP_INTERNAL_ERROR = 500
 } http_status_code;
@@ -45,6 +46,8 @@ typedef enum {
         MIME_WOFF2,
         MIME_TTF,
 
+        MIME_EVENT, 
+
         MIME_DEFAULT,  // application/octet-stream (fallback)
 } mime_type_e;
 
@@ -55,6 +58,10 @@ mime_type_e get_content_type(char* url_path);
 http_response_t* initialize_http_response(http_status_code status_code);
 
 int send_http_response(http_response_t *res, int clientSocket);
+
+int send_http_sse_response_message(const char* message, int client_socket);
+
+int send_http_sse_response_main_body(http_response_t *res, int client_socket);
 
 void free_http_response(http_response_t *res);
 

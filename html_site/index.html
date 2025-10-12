@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live File Viewer</title>
+    <style>
+        body {
+            font-family: monospace;
+            margin: 20px;
+        }
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 6px;
+            max-width: 800px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Live File Viewer</h1>
+    <p>Status: <span id="status">Waiting for updates...</span></p>
+    <pre id="file-content">Loading...</pre>
+
+    <script>
+        const fileContent = document.getElementById("file-content");
+        const status = document.getElementById("status");
+
+        // Fetch the file initially
+        async function loadFile() {
+            try {
+                const response = await fetch("/some.txt");
+                if (!response.ok) throw new Error("Failed to fetch file");
+                const text = await response.text();
+                fileContent.textContent = text;
+                status.textContent = "File loaded at " + new Date().toLocaleTimeString();
+            } catch (err) {
+                status.textContent = "Error loading file: " + err.message;
+            }
+        }
+
+        loadFile();
+
+        const evtSource = new EventSource("/some.txt.event");
+        evtSource.onmessage = (event) => {
+            console.log("SSE update:", event.data);
+            loadFile();
+        };
+
+        evtSource.onerror = (err) => {
+            console.error("SSE error", err);
+            status.textContent = "SSE connection lost";
+            evtSource.close();
+        };
+    </script>
+</body>
+</html>
