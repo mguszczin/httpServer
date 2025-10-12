@@ -74,11 +74,11 @@ static mime_map mime_types[] = {
 };
 
 typedef enum {
-        HDR_CACHE_CONTROL = 0,
-        HDR_CONTENT_LENGTH,
-        HDR_CONTENT_TYPE,
-        HDR_DATE,
-        HDR_CONNECTION
+        HDR_CACHE_CONTROL_IN = 0,
+        HDR_CONTENT_LENGTH_IN,
+        HDR_CONTENT_TYPE_IN,
+        HDR_DATE_IN,
+        HDR_CONNECTION_IN
 } automatic_header;
 
 static const char* automatic_header_names[] = {
@@ -242,7 +242,7 @@ int add_automatic_headers(http_response_t* res)
         gmtime_r(&now, &tm);
         strftime(date, 50, "%a, %d %b %Y %H:%M:%S GMT", &tm);
 
-        return add_automatic_header(res, HDR_DATE, date);
+        return add_automatic_header(res, HDR_DATE_IN, date);
 }
 
 int get_response_header_lenght(header_t header) {
@@ -410,13 +410,13 @@ int send_http_response(http_response_t *res, int clientSocket)
 
 int send_http_sse_response_main_body(http_response_t *res, int client_socket) 
 {
-        if(add_internal_header(res, HDR_CONTENT_TYPE, mime_types[MIME_EVENT].mime) == -1)
+        if(add_automatic_header(res, HDR_CONTENT_TYPE_IN, mime_types[MIME_EVENT].mime) == -1)
                 return -1;
 
-        if(add_internal_header(res, HDR_CACHE_CONTROL, "no-cache") == -1)
+        if(add_automatic_header(res, HDR_CACHE_CONTROL_IN, "no-cache") == -1)
                 return -1;
         
-        if(add_internal_header(res, HDR_CONNECTION, "keep-alive") == -1)
+        if(add_automatic_header(res, HDR_CONNECTION_IN, "keep-alive") == -1)
                 return -1;
         
         res->body_size = 0;
@@ -489,12 +489,12 @@ int add_body(http_response_t *res, const char *body, mime_type_e type)
         char size[13];
         snprintf(size, sizeof(size), "%d", res->body_size);
 
-        if (add_automatic_header(res, HDR_CONTENT_LENGTH, size) < 0) {
+        if (add_automatic_header(res, HDR_CONTENT_LENGTH_IN, size) < 0) {
                 res->body_size = 0;
                 return -1;
         }
 
-        if (add_automatic_header(res, HDR_CONTENT_TYPE, mime_types[type].mime) < 0) {
+        if (add_automatic_header(res, HDR_CONTENT_TYPE_IN, mime_types[type].mime) < 0) {
                 res->body_size = 0;
                 return -1;
         }

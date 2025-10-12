@@ -107,7 +107,7 @@ http_request_t* assign_request(char *raw_request)
 	if (!http_request) {
                 perror("Malloc of http_request_t went wrong");
                 return NULL;
-        }
+    }
 
 	// copy request so we don't modify the main string
 

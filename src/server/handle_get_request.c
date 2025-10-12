@@ -6,9 +6,12 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/epoll.h>
+#include <sys/inotify.h>
 
 #include "file_reader/read_from_file.h"
-#include "server/handle_get_response.h"
+#include "inotify/inotifyConfiguration.h"
+#include "server/http_error_response.h"
+#include "server/handle_get_request.h"
 #include "server/http_response.h"
 #include "server/http_request.h"
 
@@ -19,7 +22,7 @@
 #define EVENTS_SUFFIX ".event"
 
 /* SHOULD BE DEFINED IN GLOBAL CONFIG IN FUTURE*/
-#define RELATIVE_PATH "../../html/site"
+#define RELATIVE_PATH "html_site"
 
 enum get_request_type {
         NORMAL,
@@ -38,18 +41,20 @@ bool ends_with(const char *str, const char *suffix)
                 return false;
 
         return strcmp(str + lenstr - lensuffix, suffix) == 0;
-}
+}   
 
 bool is_safe_path(const char *base, const char *path) {
         char resolved_base[PATH_MAX];
         char resolved_path[PATH_MAX];
 
-        if (!realpath(base, resolved_base)) return false;
+        if (!realpath(base, resolved_base)) {
+                return false;
+        }
 
-        char temp[PATH_MAX];
-        snprintf(temp, sizeof(temp), "%s/%s", base, path);
-
-        if (!realpath(temp, resolved_path)) return false;
+        if (!realpath(path, resolved_path)) {
+                printf("2\n");
+                return false;
+        } 
 
         return strncmp(resolved_base, resolved_path, strlen(resolved_base)) == 0;
 }
@@ -77,7 +82,7 @@ char* get_file_from_request(char* full_path, int client_socket)
                 if (file) 
                         break;
 
-                if (errno == ENOENT && cnt == 0 || errno == EISDIR) {
+                if ((errno == ENOENT || errno == EISDIR) && cnt == 0) {
                         html_extension(full_path);
                         cnt++;
                         continue;
@@ -103,7 +108,9 @@ void handle_normal_get(http_request_t* http_request, int client_socket)
         snprintf(full_path, sizeof(full_path), "%s%s", RELATIVE_PATH,
                                                  http_request->path);
 
-        if (!is_safe_path(RELATIVE_PATH, http_request->path)) {
+        if (!is_safe_path(RELATIVE_PATH, full_path)) {
+                printf("RELATIVE PATH:%s\n", RELATIVE_PATH);
+                printf("HTTP REQUEST:%s\n", full_path);
                 send_http_error_response(HTTP_FORBIDDEN, client_socket);
                 return;
         }
@@ -112,7 +119,7 @@ void handle_normal_get(http_request_t* http_request, int client_socket)
         if (!file) 
                 return;
 
-        http_response_t* response = create_http_response(200, "OK");
+        http_response_t* response = initialize_http_response(HTTP_OK);
         if (!response) {
                 free(file);
                 send_http_error_response(HTTP_INTERNAL_ERROR, 
@@ -121,45 +128,17 @@ void handle_normal_get(http_request_t* http_request, int client_socket)
         }
 
         if(add_body(response, file, get_content_type(full_path)) == -1) {
-                free(file);
-                freeHttpResponse(response);
+                free_file_buffer(file);
+                free_http_response(response);
                 send_http_error_response(HTTP_INTERNAL_ERROR, 
                                                         client_socket);
                 return;
         }
 
-        send_http_response(client_socket, response);
+        send_http_response(response, client_socket);
 
-        freeHttpResponse(response);
+        free_http_response(response);
         free_file_buffer(file);
-}
-
-void handle_event(http_request_t* http_request, int client_socket) 
-{
-        int path_len = strlen(http_request->path);
-        int suffix_len = strlen(EVENTS_SUFFIX);
-
-        char* event_path = malloc(sizeof(char) * (path_len - suffix_len + 1));
-        if (!event_path) {
-                send_http_error_response(HTTP_INTERNAL_ERROR, client_socket);
-                return;
-        }
-
-        strncpy(event_path, http_request->path, path_len - suffix_len);
-        event_path[path_len - suffix_len] = '\0';
-
-        char full_path[PATH_MAX];
-        snprintf(full_path, sizeof(full_path), "%s%s", RELATIVE_PATH, 
-                                                                event_path);
-
-        if (!is_safe_path(RELATIVE_PATH, event_path)) {
-                send_http_error_response(HTTP_FORBIDDEN, client_socket);
-                free(event_path);
-                return;
-        }
-
-
-        free(event_path);
 }
 
 #define INOTIFY_BUF_LEN 64
@@ -219,12 +198,53 @@ void handle_event_request(char* path, int client_socket)
         close(file_descriptor);
 }
 
+/* Really similar function to the handle_normal_get() */
+void handle_event(http_request_t* http_request, int client_socket) 
+{
+        int path_len = strlen(http_request->path);
+        int suffix_len = strlen(EVENTS_SUFFIX);
+
+        char* event_path = malloc(sizeof(char) * (path_len - suffix_len + 1));
+        if (!event_path) {
+                send_http_error_response(HTTP_INTERNAL_ERROR, client_socket);
+                return;
+        }
+
+        strncpy(event_path, http_request->path, path_len - suffix_len);
+        event_path[path_len - suffix_len] = '\0';
+
+        char full_path[PATH_MAX];
+        snprintf(full_path, sizeof(full_path), "%s%s", RELATIVE_PATH, 
+                                                                event_path);
+
+        if (!is_safe_path(RELATIVE_PATH, full_path)) {
+                send_http_error_response(HTTP_FORBIDDEN, client_socket);
+                free(event_path);
+                return;
+        }
+
+        http_response_t* response = initialize_http_response(HTTP_OK);
+        if (!response) {
+                send_http_error_response(HTTP_INTERNAL_ERROR, 
+                                                        client_socket);
+                return;
+        }
+
+        send_http_sse_response_main_body(response, client_socket);
+        free_http_response(response);
+
+        handle_event_request(full_path, client_socket);
+
+        free(event_path);
+        return;
+}
+
 /*
 * Requests are devided into two categories:
 * 1. Normal GET requests - serve static files
 * 2. Event GET requests - serve events (long polling)
 */
-http_response_t* handle_get_request(http_request_t* http_request, int client_socket) 
+void handle_get_request(http_request_t* http_request, int client_socket) 
 {
         
         if (ends_with(http_request->path, EVENTS_SUFFIX)) 

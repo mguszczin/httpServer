@@ -3,14 +3,14 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include "read_from_file.h"
+#include "file_reader/read_from_file.h"
 
 /*
  * Reads the entire contents of a file into a dynamically allocated buffer.
  * Returns a pointer to the buffer (caller must free it) on success, or NULL on failure.
  * If the path points to a directory, NULL is returned.
  */
-char *getfile(char *filepath)
+char *read_from_file(char *filepath)
 {
 	FILE *file = fopen(filepath, "r");
 	if (file == NULL) {

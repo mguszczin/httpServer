@@ -11,9 +11,11 @@
 
 #include "server/http_request.h"
 #include "server/http_response.h"
+#include "server/server.h"
+#include "server/http_error_response.h"
+#include "server/handle_get_request.h"
 #include "inotify/inotifyConfiguration.h"
 #include "file_reader/read_from_file.h"
-#include "server/server.h"
 
 #define BUFFER_SIZE 256
 char *DIR_PATH = "file_read";
@@ -82,8 +84,6 @@ void handle_socket(int clientsocket)
 
 	
         buffer_size = dynamic_read_from_socket(&http_buffer, buffer_size, clientsocket);
-        printf("Received request:\n%s\n", http_buffer);
-        printf("Buffer size: %d\n", buffer_size);
         if (buffer_size == -1) {
                 fprintf(stderr, "Something went wrong when reading from socket");
                 free(http_buffer);

@@ -3,8 +3,8 @@
 #include <string.h>
 
 #include "server/http_error_response.h"
-#include "http_response.h"
-#include "http_error_response.h"
+#include "server/http_response.h"
+#include "server/http_error_response.h"
 
 static const char *error_template =
         "<html>\n"
